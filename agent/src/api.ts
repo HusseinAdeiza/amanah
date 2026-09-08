@@ -1,11 +1,13 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import { z } from "zod";
 import { logger } from "./lib/logger.js";
 import { config } from "./lib/config.js";
-import { all } from "./lib/db.js";
+import { all, get } from "./lib/db.js";
 import type { McpClient } from "./mcp/types.js";
 import { RulesEngine } from "./rules/index.js";
 import { AuditTrail } from "./audit/index.js";
+import { processDonation } from "./intake/index.js";
 import type { IpfsClient } from "@amanah/receipts";
 
 export function createApi(mcp: McpClient, ipfs: IpfsClient, rules: RulesEngine, audit: AuditTrail): Express {
@@ -30,6 +32,31 @@ export function createApi(mcp: McpClient, ipfs: IpfsClient, rules: RulesEngine, 
       const rows = await all("SELECT * FROM donations ORDER BY timestamp DESC");
       res.json({ donations: rows });
     } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
+    }
+  });
+
+  app.post("/donations", async (req, res) => {
+    try {
+      const schema = z.object({
+        asset: z.string().min(1),
+        amount: z.string().min(1),
+        donor: z.string().optional().default("anonymous"),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.format() });
+      }
+      const { asset, amount, donor } = parsed.data;
+      const result = await processDonation(mcp, ipfs, {
+        donorRef: donor,
+        asset: asset.toUpperCase(),
+        amount,
+      });
+      const donation = await get<Record<string, unknown>>("SELECT * FROM donations WHERE id = ?", [result.donationId]);
+      res.json({ donation, receiptCid: result.receiptCid });
+    } catch (err) {
+      logger.error({ err }, "POST /donations failed");
       res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
     }
   });
