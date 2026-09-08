@@ -1,10 +1,39 @@
 import sqlite3 from "sqlite3";
-import { mkdirSync } from "fs";
-import { dirname } from "path";
+import { mkdirSync, existsSync, copyFileSync, unlinkSync, statSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import { config } from "./config.js";
 import { logger } from "./logger.js";
 
 mkdirSync(dirname(config.DB_PATH), { recursive: true });
+
+function migrateOldDb(): void {
+  try {
+    const libDir = dirname(fileURLToPath(import.meta.url));
+    const projectRoot = dirname(dirname(dirname(libDir)));
+    const oldPath = join(projectRoot, "data", "amanah.sqlite");
+    const canonicalPath = config.DB_PATH;
+
+    if (!existsSync(oldPath) || oldPath === canonicalPath) return;
+
+    const oldSize = statSync(oldPath).size;
+    const newSize = existsSync(canonicalPath) ? statSync(canonicalPath).size : 0;
+
+    if (oldSize > newSize) {
+      copyFileSync(oldPath, canonicalPath);
+      logger.info({ from: oldPath, to: canonicalPath, oldSize, newSize }, "Migrated old SQLite database to canonical location");
+    } else {
+      logger.info({ oldPath, canonicalPath, oldSize, newSize }, "Canonical DB already up to date, skipping migration");
+    }
+
+    unlinkSync(oldPath);
+    logger.info({ path: oldPath }, "Removed stale SQLite database");
+  } catch (err) {
+    logger.warn({ err }, "Database migration skipped");
+  }
+}
+
+migrateOldDb();
 
 export const db = new sqlite3.Database(config.DB_PATH, (err) => {
   if (err) logger.error({ err }, "SQLite open error");
