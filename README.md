@@ -1,5 +1,10 @@
 # Amanah — Autonomous Treasury Agent for Charities & NGOs
 
+[![CI](https://github.com/HusseinAdeiza/amanah/actions/workflows/ci.yml/badge.svg)](https://github.com/HusseinAdeiza/amanah/actions/workflows/ci.yml)
+
+> **Track A submission — Binance Agent OS Mini Hackathon**  
+> Deadline: Sept 8, 2026, 23:59 UTC
+
 > **Track A submission — Binance Agent OS Mini Hackathon**  
 > Deadline: Sept 8, 2026, 23:59 UTC
 
