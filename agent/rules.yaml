@@ -1,0 +1,38 @@
+version: "1.0"
+rules:
+  - id: threshold-bnb
+    name: "BNB threshold protection"
+    enabled: true
+    condition:
+      type: threshold
+      asset: BNB
+      minUsd: 500
+    action:
+      type: convert
+      fromAsset: BNB
+      toAsset: USDC
+      amount: all
+
+  - id: volatile-ratio-cap
+    name: "Volatile asset ratio cap"
+    enabled: true
+    condition:
+      type: ratio
+      maxRatio: 0.30
+    action:
+      type: convert
+      fromAsset: BNB
+      toAsset: USDC
+      amount: all
+
+  - id: weekly-sweep
+    name: "Weekly stablecoin sweep"
+    enabled: false
+    condition:
+      type: schedule
+      cron: "0 9 * * 1"
+    action:
+      type: convert
+      fromAsset: BTC
+      toAsset: USDC
+      amount: all
