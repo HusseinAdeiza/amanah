@@ -5,9 +5,6 @@
 > **Track A submission — Binance Agent OS Mini Hackathon**  
 > Deadline: Sept 8, 2026, 23:59 UTC
 
-> **Track A submission — Binance Agent OS Mini Hackathon**  
-> Deadline: Sept 8, 2026, 23:59 UTC
-
 ## Problem
 
 Charities and NGOs in emerging markets increasingly receive crypto donations, but face three critical failures:
@@ -39,11 +36,13 @@ flowchart TB
         AUDIT["Audit & Receipts<br/>SQLite + IPFS hash-chain"]
         CLI["Natural Language CLI<br/>REPL"]
         API["Read-only API<br/>Express"]
+        LIVE["Live Market Data<br/>Binance Public API"]
     end
 
     subgraph Binance["Binance Agent OS"]
         MCP["MCP Server<br/>balances / prices / spot convert"]
         WALLET["Agentic Sub-account"]
+        PAPI["Public API<br/>ticker/24hr (no auth)"]
     end
 
     subgraph Public["Public Verification"]
@@ -59,6 +58,8 @@ flowchart TB
     API --> DASH
     RULES -->|dry-run / execute| MCP
     MCP --> WALLET
+    LIVE -->|real prices| RULES
+    PAPI --> LIVE
     AUDIT -->|pin receipt| IPFS
 ```
 
@@ -81,23 +82,16 @@ amanah/
 │   │   ├── rules/      # Protection rules engine
 │   │   ├── audit/      # Audit trail + IPFS receipts
 │   │   ├── cli/        # Natural language REPL
-│   │   ├── mcp/        # MCP client (Binance + mock)
+│   │   ├── mcp/        # MCP clients (Binance / mock / live-market)
 │   │   ├── lib/        # Config, logger, DB
 │   │   ├── api.ts      # Express API for dashboard
 │   │   ├── index.ts    # Agent entry point
-│   │   └── demo.ts     # End-to-end demo script
+│   │   └── demo.ts     # End-to-end dry-run demo script
 │   ├── rules.yaml      # Default protection rules
 │   └── .env.example
 ├── web/                # Public dashboard (Vite + React)
-│   ├── src/
-│   │   ├── App.tsx
-│   │   └── hooks/useApi.ts
-│   ├── index.html
-│   └── vite.config.ts
 ├── receipts/           # Shared IPFS receipt library
-│   └── src/
-│       ├── index.ts    # Receipt creation + hash chain
-│       └── ipfs.ts     # IPFS clients (web3.storage + mock)
+├── scripts/            # Live-demo script
 ├── package.json        # Root pnpm workspace
 └── README.md
 ```
@@ -130,23 +124,47 @@ pnpm run dev
 # Agent API: http://localhost:4000
 # Dashboard: http://localhost:5173
 
-# 5. Run the end-to-end demo
+# 5. Run the end-to-end dry-run demo
 pnpm run demo
 ```
 
-## Demo Script (`pnpm run demo`)
+## Demo Modes
 
-The demo runs a fully scripted dry-run:
+### Dry-Run Mode (`pnpm run demo`)
+Fully simulated pipeline — mock balances, mock prices, mock IPFS. Zero API keys. Runs in ~10 seconds. This is the default and safest mode.
 
-1. Shows initial mock treasury (USDC, BNB, BTC, ETH)
-2. Simulates 3 incoming donations
-3. Evaluates protection rules (triggers on volatile drop)
-4. Creates a pending proposal
-5. Human operator confirms the proposal (dry-run execution)
-6. Verifies the audit hash-chain locally
-7. Displays IPFS receipt links
+### Live-Demo Mode (`node scripts/demo-live.mjs`)
+Uses **real** Binance public market data (no authentication required) with **simulated** balances and trade execution. Optional real IPFS receipt pinning via web3.storage (free tier).
 
-Zero real funds. Zero API keys. Judges can run it within 60 seconds of clone.
+```bash
+# Build first
+pnpm run build
+
+# Run with real market data + mock execution
+node scripts/demo-live.mjs
+
+# Run with real market data + real IPFS pinning
+WEB3_STORAGE_TOKEN=<your-token> node scripts/demo-live.mjs
+```
+
+**What is real vs simulated in live-demo mode:**
+
+| Component | Mode | Why |
+|-----------|------|-----|
+| Market prices | **REAL** | Fetched from Binance public API (`/api/v3/ticker/24hr`) — no auth needed |
+| Balances | Simulated | No real funds at risk |
+| Trade execution | Simulated | `confirm-before-execute` safety layer still enforced |
+| IPFS receipts | Optional real | Set `WEB3_STORAGE_TOKEN` for real pinning; mock otherwise |
+| Audit chain | Real | Hash-chained SQLite records are real and verifiable |
+
+### Full Live Trading
+To enable real execution on Binance Agent OS:
+1. Create an Agentic sub-account with least-privilege scopes
+2. Set `DRY_RUN=false` in `.env`
+3. Provide `BINANCE_MCP_URL` and sub-account API credentials
+4. Every convert still requires explicit human confirmation
+
+See [Binance Agent OS documentation](https://www.binance.com/en/support) for sub-account setup.
 
 ## CLI Commands
 

@@ -1,6 +1,6 @@
-# Amanah — 3-Minute Demo Video Script
+# Amanah — 3-Minute Live Demo Video Script
 
-> Exact narration for hackathon demo video. Run `pnpm run demo` to execute the live segments.
+> Exact narration for hackathon demo video. Run `node scripts/demo-live.mjs` for the live market data version.
 
 ---
 
@@ -30,27 +30,27 @@ It never speculates. A human always confirms any action that moves funds. And ev
 
 ---
 
-## 0:45–1:15 — Live Demo: Donation Intake
+## 0:45–1:15 — Live Demo: Real Market Data + Donation Intake
 
-**[Screen: terminal running `pnpm run demo`]**
+**[Screen: terminal running `node scripts/demo-live.mjs`]**
 
-"Let's run the fully automated demo. We're in dry-run mode — no real funds, no API keys.
+"We're running live-demo mode. Notice: real market prices from Binance public API — no authentication needed — but balances and execution remain simulated for safety.
 
-First, we see the initial treasury: USDC, BNB, BTC, ETH.
+First, we see the initial treasury with simulated balances. Then the live price fetch: BTC, BNB, ETH — all real 24-hour ticker data.
 
-Now three donations arrive: BNB from donor-alpha, BTC from donor-beta, ETH from donor-gamma. Each is logged with a pseudonymous donor reference, a USD estimate, and an IPFS receipt."
+Now three donations arrive: BNB from donor-alpha, BTC from donor-beta, ETH from donor-gamma. Each is logged with a pseudonymous donor reference, a USD estimate using the real live price, and an IPFS receipt."
 
 **[Narrator pauses as the terminal prints each receipt CID]**
 
-"Every donation immediately generates a signed, hash-chained receipt pinned to IPFS."
+"Every donation immediately generates a signed, hash-chained receipt."
 
 ---
 
 ## 1:15–1:45 — Rule Trigger & Proposal
 
-**[Screen: terminal continues — rules evaluate]**
+**[Screen: terminal continues — rules evaluate against real prices]**
 
-"Now the protection rules engine checks the treasury. We simulate a volatile drop in BNB to trigger the threshold rule.
+"Now the protection rules engine checks the treasury against real market data. If a volatile asset holding exceeds $500 equivalent, or if volatile exposure crosses 30%, a proposal is created.
 
 The engine creates a proposal: convert BNB to USDC. But notice — it does NOT execute. It stages the action and waits for human confirmation. This is confirm-before-execute, matching Binance Agent OS safety patterns."
 
@@ -60,7 +60,7 @@ The engine creates a proposal: convert BNB to USDC. But notice — it does NOT e
 
 **[Screen: terminal — operator confirms proposal]**
 
-"The NGO operator sees the pending proposal, confirms it, and the convert executes — in dry-run, using mock balances. The real system would call the Binance MCP spot-convert tool.
+"The NGO operator sees the pending proposal, confirms it, and the convert is simulated. The real system would call the Binance MCP spot-convert tool inside an Agentic sub-account.
 
 A new receipt is generated, hash-linked to the previous one, and pinned to IPFS."
 
@@ -92,7 +92,7 @@ Donors, regulators, and the public can verify every movement without trusting th
 
 **[Screen: architecture diagram + GitHub link]**
 
-"Amanah is built on Binance Agent OS MCP tools, uses Agentic Wallet for donation intake, and pins audit receipts to IPFS.
+"Amanah is built on Binance Agent OS MCP tools, uses Agentic Wallet for donation intake, and pins audit receipts to IPFS. It runs in dry-run mode by default, or live-demo mode with real market data and simulated execution. Full live trading requires an Agentic sub-account with least-privilege scopes.
 
 It's open-source, fully demoable in under five minutes, and ready to protect real treasuries.
 
@@ -102,6 +102,7 @@ Thank you."
 
 ## Technical Notes for Recording
 
-- Run `pnpm run demo` in one terminal window for the CLI segments.
+- Run `node scripts/demo-live.mjs` in one terminal window for the CLI segments.
 - In a second terminal, run `pnpm --filter agent run start` and `pnpm --filter web run dev` for the dashboard segment.
-- The mock data is deterministic and will produce consistent outputs for recording.
+- The live prices are fetched from Binance public API and cached for 30 seconds.
+- For a purely offline demo, use `pnpm run demo` instead.
