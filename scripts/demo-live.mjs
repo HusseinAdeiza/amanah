@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { initSchema } from "../agent/dist/lib/db.js";
 import { LiveMarketMcpClient } from "../agent/dist/mcp/live-market.js";
-import { MockIpfsClient, Web3StorageIpfsClient } from "../receipts/dist/index.js";
+import { MockIpfsClient, Web3StorageIpfsClient, PinataIpfsClient } from "../receipts/dist/index.js";
 import { RulesEngine } from "../agent/dist/rules/index.js";
 import { AuditTrail } from "../agent/dist/audit/index.js";
 import { processDonation } from "../agent/dist/intake/index.js";
@@ -23,13 +23,24 @@ function banner(title) {
   console.log(`\n${"=".repeat(60)}\n  ${title}\n${"=".repeat(60)}`);
 }
 
+function createIpfsClient() {
+  const pinataJwt = process.env.PINATA_JWT;
+  const web3Token = process.env.WEB3_STORAGE_TOKEN;
+  if (pinataJwt && pinataJwt.length > 0) {
+    return { client: new PinataIpfsClient(pinataJwt), provider: "Pinata" };
+  }
+  if (web3Token && web3Token.length > 0) {
+    return { client: new Web3StorageIpfsClient(web3Token), provider: "web3.storage" };
+  }
+  return { client: new MockIpfsClient(), provider: "mock" };
+}
+
 async function runLiveDemo() {
   banner("AMANAH LIVE DEMO — Real Market Data + Simulated Execution");
   await initSchema();
 
   const mcp = new LiveMarketMcpClient();
-  const token = process.env.WEB3_STORAGE_TOKEN;
-  const ipfs = token && token.length > 0 ? new Web3StorageIpfsClient(token) : new MockIpfsClient();
+  const { client: ipfs, provider } = createIpfsClient();
   const rules = new RulesEngine(join(__dirname, "../agent/rules.yaml"));
   const audit = new AuditTrail(ipfs);
 
@@ -41,7 +52,8 @@ async function runLiveDemo() {
   const livePrices = await mcp.getPrices(["BTC", "BNB", "ETH"]);
   console.table(livePrices.map((p) => ({ Asset: p.asset, "Price USD": p.priceUsd.toFixed(2), Source: "Binance Public API" })));
 
-  console.log("\n[3] Simulating incoming donations in volatile assets...");
+  console.log(`\n[3] IPFS provider: ${provider}`);
+  console.log("Simulating incoming donations in volatile assets...");
   const donations = [
     { donorRef: "donor-alpha", asset: "BNB", amount: "2.5" },
     { donorRef: "donor-beta", asset: "BTC", amount: "0.05" },
@@ -93,7 +105,11 @@ async function runLiveDemo() {
   console.log("\n[9] IPFS receipt links:");
   for (const e of chain.slice(-5)) {
     if (e.cid) {
-      const url = token ? `https://w3s.link/ipfs/${e.cid}` : `https://mock.ipfs/${e.cid}`;
+      const url = provider === "Pinata"
+        ? `https://gateway.pinata.cloud/ipfs/${e.cid}`
+        : provider === "web3.storage"
+          ? `https://w3s.link/ipfs/${e.cid}`
+          : `https://mock.ipfs/${e.cid}`;
       console.log(`  - ${e.eventType}: ${url}`);
     }
   }
@@ -103,7 +119,7 @@ async function runLiveDemo() {
   console.log("  • Market data: REAL (Binance public API, no auth required)");
   console.log("  • Balances: SIMULATED (no real funds at risk)");
   console.log("  • Trade execution: SIMULATED (confirm-before-execute safety)");
-  console.log(`  • IPFS receipts: ${token ? "REAL (web3.storage)" : "MOCK (set WEB3_STORAGE_TOKEN for real pinning)"}`);
+  console.log(`  • IPFS receipts: ${provider === "mock" ? "MOCK (set PINATA_JWT or WEB3_STORAGE_TOKEN for real pinning)" : `REAL (${provider})`}`);
   console.log("\nFor full live trading, use DRY_RUN=false with a Binance Agentic sub-account.\n");
 }
 
